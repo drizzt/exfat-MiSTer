@@ -31,6 +31,8 @@ void exfat_stat(const struct exfat* ef, const struct exfat_node* node,
 	memset(stbuf, 0, sizeof(struct stat));
 	if (node->attrib & EXFAT_ATTRIB_DIR)
 		stbuf->st_mode = S_IFDIR | (0777 & ~ef->dmask);
+	else if (exfat_is_symlink(ef, node->attrib))
+		stbuf->st_mode = S_IFLNK | (0777 & ~ef->dmask);
 	else
 		stbuf->st_mode = S_IFREG | (0777 & ~ef->fmask);
 	stbuf->st_nlink = 1;

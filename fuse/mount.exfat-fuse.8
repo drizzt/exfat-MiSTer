@@ -77,6 +77,10 @@ Mount the file system in read only mode.
 .TP
 .BI noatime
 Do not update access time when file is read.
+.TP
+.BI nosymlinks
+Do not treat files with the System attribute as symbolic links.
+Such files appear as regular files, and creating symbolic links fails.
 
 .SH EXIT CODES
 Zero is returned on successful mount. Any other code means an error.

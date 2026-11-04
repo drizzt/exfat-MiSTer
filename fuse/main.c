@@ -318,6 +318,43 @@ static int fuse_exfat_mkdir(const char* path, UNUSED mode_t mode)
 	return exfat_mkdir(&ef, path);
 }
 
+static int fuse_exfat_readlink(const char* path, char* buffer, size_t size)
+{
+	struct exfat_node* node;
+	ssize_t bytes;
+	int rc;
+
+	exfat_debug("[%s] %s", __func__, path);
+
+	if (size == 0)
+		return -EINVAL;
+	rc = exfat_lookup(&ef, &node, path);
+	if (rc != 0)
+		return rc;
+	if (!exfat_is_symlink(&ef, node->attrib))
+	{
+		exfat_put_node(&ef, node);
+		return -EINVAL;
+	}
+	/* truncate longer targets like the kernel does, a full page reply
+	   makes FUSE fail with EIO */
+	bytes = exfat_generic_pread(&ef, node, buffer,
+			MIN(MIN(node->size, EXFAT_SYMLINK_MAX), size - 1), 0);
+	/* reading may have updated atime */
+	exfat_flush_node(&ef, node);
+	exfat_put_node(&ef, node);
+	if (bytes < 0)
+		return bytes;
+	buffer[bytes] = '\0';
+	return 0;
+}
+
+static int fuse_exfat_symlink(const char* target, const char* path)
+{
+	exfat_debug("[%s] %s -> %s", __func__, path, target);
+	return exfat_symlink(&ef, path, target);
+}
+
 static int fuse_exfat_rename(const char* old_path, const char* new_path
 #if FUSE_USE_VERSION >= 30
 		, UNUSED unsigned int flags
@@ -355,7 +392,7 @@ static int fuse_exfat_chmod(UNUSED const char* path, mode_t mode
 #endif
 		)
 {
-	const mode_t VALID_MODE_MASK = S_IFREG | S_IFDIR |
+	const mode_t VALID_MODE_MASK = S_IFREG | S_IFDIR | S_IFLNK |
 			S_IRWXU | S_IRWXG | S_IRWXO;
 
 	exfat_debug("[%s] %s 0%ho", __func__, path, mode);
@@ -451,6 +488,8 @@ static struct fuse_operations fuse_exfat_ops =
 	.rmdir		= fuse_exfat_rmdir,
 	.mknod		= fuse_exfat_mknod,
 	.mkdir		= fuse_exfat_mkdir,
+	.readlink	= fuse_exfat_readlink,
+	.symlink	= fuse_exfat_symlink,
 	.rename		= fuse_exfat_rename,
 	.utimens	= fuse_exfat_utimens,
 	.chmod		= fuse_exfat_chmod,

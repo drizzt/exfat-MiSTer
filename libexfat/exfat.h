@@ -122,6 +122,7 @@ struct exfat
 	gid_t gid;
 	int ro;
 	bool noatime;
+	bool nosymlinks;
 	enum { EXFAT_REPAIR_NO, EXFAT_REPAIR_ASK, EXFAT_REPAIR_YES } repair;
 };
 
@@ -162,6 +163,14 @@ ssize_t exfat_generic_pread(const struct exfat* ef, struct exfat_node* node,
 		void* buffer, size_t size, off_t offset);
 ssize_t exfat_generic_pwrite(struct exfat* ef, struct exfat_node* node,
 		const void* buffer, size_t size, off_t offset);
+
+/* MiSTer kernel symlink: see EXFAT_ATTRIB_SYMLINK_OLD */
+static inline bool exfat_is_symlink(const struct exfat* ef,
+		uint16_t attrib)
+{
+	return !ef->nosymlinks && !(attrib & EXFAT_ATTRIB_DIR) &&
+		(attrib & (EXFAT_ATTRIB_SYSTEM | EXFAT_ATTRIB_SYMLINK_OLD));
+}
 
 int exfat_opendir(struct exfat* ef, struct exfat_node* dir,
 		struct exfat_iterator* it);
@@ -216,6 +225,7 @@ int exfat_unlink(struct exfat* ef, struct exfat_node* node);
 int exfat_rmdir(struct exfat* ef, struct exfat_node* node);
 int exfat_mknod(struct exfat* ef, const char* path);
 int exfat_mkdir(struct exfat* ef, const char* path);
+int exfat_symlink(struct exfat* ef, const char* path, const char* target);
 int exfat_rename(struct exfat* ef, const char* old_path, const char* new_path);
 void exfat_utimes(struct exfat_node* node, const struct timespec tv[2]);
 void exfat_update_atime(struct exfat_node* node);

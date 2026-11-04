@@ -1022,6 +1022,43 @@ int exfat_mkdir(struct exfat* ef, const char* path)
 	return 0;
 }
 
+int exfat_symlink(struct exfat* ef, const char* path, const char* target)
+{
+	/* stored like the MiSTer kernel: target path without trailing NUL */
+	const size_t size = strlen(target);
+	struct exfat_node* node;
+	ssize_t written;
+	int rc;
+
+	/* would read back as a regular file */
+	if (ef->nosymlinks)
+		return -EPERM;
+	if (size > EXFAT_SYMLINK_MAX)
+		return -ENAMETOOLONG;
+	rc = create(ef, path, EXFAT_ATTRIB_ARCH | EXFAT_ATTRIB_SYSTEM);
+	if (rc != 0)
+		return rc;
+	rc = exfat_lookup(ef, &node, path);
+	if (rc != 0)
+		return rc;
+	written = exfat_generic_pwrite(ef, node, target, size, 0);
+	if (written < 0)
+		rc = written;
+	else if ((size_t) written != size)
+		rc = -EIO;
+	else
+		rc = exfat_flush_node(ef, node);
+	if (rc != 0)
+	{
+		delete(ef, node);
+		exfat_put_node(ef, node);
+		exfat_cleanup_node(ef, node);
+		return rc;
+	}
+	exfat_put_node(ef, node);
+	return 0;
+}
+
 static int rename_entry(struct exfat* ef, struct exfat_node* dir,
 		struct exfat_node* node, const le16_t* name, off_t new_offset)
 {

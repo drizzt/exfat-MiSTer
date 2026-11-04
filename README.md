@@ -63,6 +63,18 @@ Modern GNU/Linux distributions (with [util-linux][12] 2.18 or later) will mount 
 
 where /dev/spec is the [device file][13], /mnt/exfat is a mountpoint.
 
+Symbolic links
+--------------
+
+exFAT has no symbolic links. This driver reads and creates them in the format used by the MiSTer Linux kernel: a regular file with the System attribute set (or attribute bit 0x40, an older layout), whose data is the target path. The target can be at most 4095 bytes long.
+
+Note the following:
+
+* Windows and other exFAT drivers see such a link as a small regular file that contains the target path.
+* Every existing file with the System attribute (for example one marked as System on Windows) appears as a symbolic link. The MiSTer kernel behaves the same way.
+* Setting or clearing the System attribute with exfatattrib turns a file into a link or back. This does not work for links that use bit 0x40, which exfatattrib cannot clear. The MiSTer kernel itself refuses to change whether an entry is a link through its attribute ioctl.
+* Mount with `-o nosymlinks` to disable this: such files then appear as regular files and creating links fails.
+
 Feedback
 --------
 

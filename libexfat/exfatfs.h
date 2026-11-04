@@ -131,6 +131,10 @@ STATIC_ASSERT(sizeof(struct exfat_entry_label) == 32);
 #define EXFAT_ATTRIB_VOLUME 0x08
 #define EXFAT_ATTRIB_DIR    0x10
 #define EXFAT_ATTRIB_ARCH   0x20
+/* Symlinks as stored by the MiSTer kernel: a file with SYSTEM set, or with
+   the bit below in an older layout. The file data is the target path. */
+#define EXFAT_ATTRIB_SYMLINK_OLD 0x40
+#define EXFAT_SYMLINK_MAX 4095		/* target length, as limited by PATH_MAX */
 
 struct exfat_entry_meta1			/* file or directory info (part 1) */
 {
